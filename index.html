@@ -1,303 +1,390 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Placement Tracker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f3f5fb;color:#202944}
-header{background:#172554;color:white;padding:22px 7%;display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
-header h2{margin:0}
-header p{margin:6px 0 0;color:#c7d2fe}
-button{border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-weight:bold}
-.primary{background:#4f46e5;color:white}
-.secondary{background:#e0e7ff;color:#3730a3}
-.danger{background:#fee2e2;color:#b91c1c}
-.container{max-width:1150px;margin:30px auto;padding:0 18px}
-.hero{background:linear-gradient(120deg,#4338ca,#7c3aed);color:white;padding:28px;border-radius:16px;margin-bottom:24px}
-.hero h1{margin-top:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px}
-.card{background:white;padding:22px;border-radius:13px;box-shadow:0 4px 18px #1725540c}
-.stat{font-size:30px;font-weight:bold;color:#4f46e5;margin-top:12px}
-.layout{display:grid;grid-template-columns:1fr 1.5fr;gap:20px}
-h2{margin-top:0}
-label{display:block;margin:14px 0 6px;font-size:14px;font-weight:bold}
-input,select{width:100%;padding:12px;border:1px solid #d5d9e5;border-radius:8px;font-size:15px}
-.formbutton{margin-top:16px;width:100%}
-.tablewrap{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:650px}
-th,td{text-align:left;padding:13px;border-bottom:1px solid #edf0f6;font-size:14px}
-th{background:#f8fafc}
-.badge{background:#dcfce7;color:#166534;padding:5px 8px;border-radius:20px}
-.notplaced{background:#fef3c7;color:#92400e}
-.actions button{margin:3px;padding:7px 9px}
-.hidden{display:none!important}
-footer{text-align:center;color:#64748b;padding:25px}
-#login{max-width:400px;margin:80px auto;padding:28px;background:white;border-radius:16px;box-shadow:0 8px 35px #0001}
-#login h1{color:#4338ca}
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
-.toolbar input{flex:1;min-width:180px}
-@media(max-width:760px){.layout{grid-template-columns:1fr}header{padding:20px}.container{margin-top:18px}}
-</style>
+    <title>Student Placement Tracker</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script defer src="script.js"></script>
 </head>
 
 <body>
 
-<section id="login">
-<h1>🎓 StudentTrack</h1>
-<p>Student Placement Management System</p>
-<form id="loginForm">
-<label>Admin Username</label>
-<input id="username" required placeholder="Enter username">
-<label>Password</label>
-<input id="password" type="password" required placeholder="Enter password">
-<button class="primary formbutton">Login</button>
-</form>
-<p id="loginError" style="color:#dc2626"></p>
-<small>Demo login: admin / admin123</small>
-</section>
+    <div class="bg-orb orb-one"></div>
+    <div class="bg-orb orb-two"></div>
 
-<div id="app" class="hidden">
-<header>
-<div>
-<h2>🎓 StudentTrack</h2>
-<p>Student Placement Management System</p>
-</div>
-<button class="secondary" onclick="logout()">Logout</button>
-</header>
+    <main class="shell">
 
-<main class="container">
-<section class="hero">
-<h1>Placement Dashboard</h1>
-<p>Manage student records and track placement progress in one place.</p>
-</section>
+        <!-- Header -->
+        <header class="topbar">
+            <a class="brand" href="#">
+                <span class="brand-icon">SP</span>
 
-<section class="stats">
-<div class="card">Total Students<div class="stat" id="total">0</div></div>
-<div class="card">Placed Students<div class="stat" id="placed">0</div></div>
-<div class="card">Not Placed<div class="stat" id="unplaced">0</div></div>
-<div class="card">Placement Rate<div class="stat" id="rate">0%</div></div>
-</section>
+                <span>
+                    Student<span class="brand-light">Track</span>
+                    <small>PLACEMENT MANAGEMENT</small>
+                </span>
+            </a>
 
-<div class="layout">
-<section class="card">
-<h2 id="formTitle">Add Student</h2>
-<form id="studentForm">
-<input id="editId" type="hidden">
-<label>Student Name *</label>
-<input id="name" required placeholder="Full name">
-<label>Roll Number *</label>
-<input id="roll" required placeholder="e.g. TEITA153">
-<label>Department</label>
-<select id="department">
-<option>Information Technology</option>
-<option>Computer Engineering</option>
-<option>AI & Data Science</option>
-<option>Electronics</option>
-<option>Mechanical</option>
-</select>
-<label>CGPA</label>
-<input id="cgpa" type="number" min="0" max="10" step="0.01" placeholder="e.g. 8.2">
-<label>Placement Status</label>
-<select id="status" onchange="toggleCompany()">
-<option value="Not Placed">Not Placed</option>
-<option value="Placed">Placed</option>
-</select>
-<div id="companyBox" class="hidden">
-<label>Company Name</label>
-<input id="company" placeholder="Company name">
-</div>
-<button class="primary formbutton" id="saveButton">Add Student</button>
-<button type="button" class="secondary formbutton hidden" id="cancelEdit" onclick="resetForm()">Cancel Edit</button>
-</form>
-</section>
+            <span class="status-pill">
+                <span class="status-dot"></span>
+                Web App
+            </span>
+        </header>
 
-<section class="card">
-<h2>Student Records</h2>
-<div class="toolbar">
-<input id="search" placeholder="Search by name, roll or company...">
-<button class="secondary" onclick="exportCSV()">Export CSV</button>
-</div>
-<div class="tablewrap">
-<table>
-<thead>
-<tr><th>Name</th><th>Roll No.</th><th>CGPA</th><th>Status</th><th>Company</th><th>Actions</th></tr>
-</thead>
-<tbody id="studentRows"></tbody>
-</table>
-</div>
-<p id="emptyMessage">No students added yet.</p>
-</section>
-</div>
+        <!-- Setup Notice -->
+        <section id="setupNotice" class="notice hidden">
+            <h2>One-time Setup Needed</h2>
 
-<section class="card" style="margin-top:22px">
-<h2>Placement Summary</h2>
-<p id="summary">Add student records to view placement statistics.</p>
-</section>
-</main>
+            <p>
+                Add your Supabase Project URL and anon/public key
+                in config.js. Then run supabase_setup.sql in
+                your Supabase SQL Editor.
+            </p>
+        </section>
 
-<footer>StudentTrack · Student Placement Management System</footer>
-</div>
+        <!-- Login and Registration -->
+        <section id="authView" class="auth-layout">
 
-<script>
-const $ = id => document.getElementById(id);
-let students = [];
-let nextId = 1;
+            <div class="hero-copy">
 
-try {
-  students = JSON.parse(localStorage.getItem("studentTrackRecords") || "[]");
-  nextId = Math.max(0,...students.map(s=>Number(s.id)||0))+1;
-} catch(e) { students = []; }
+                <span class="eyebrow">
+                    YOUR PLACEMENT JOURNEY, ORGANIZED
+                </span>
 
-$("loginForm").addEventListener("submit",function(e){
-  e.preventDefault();
-  if($("username").value.trim()==="admin" && $("password").value==="admin123"){
-    $("login").classList.add("hidden");
-    $("app").classList.remove("hidden");
-    render();
-  } else {
-    $("loginError").textContent="Invalid username or password.";
-  }
-});
+                <h1>
+                    Make every<br>
+                    <span>opportunity count.</span>
+                </h1>
 
-function logout(){
-  $("app").classList.add("hidden");
-  $("login").classList.remove("hidden");
-  $("password").value="";
-}
+                <p>
+                    Manage student profiles, track placement progress,
+                    and keep your records organized in one simple dashboard.
+                </p>
 
-function saveData(){
-  localStorage.setItem("studentTrackRecords",JSON.stringify(students));
-}
+                <div class="hero-points">
+                    <div><span>✓</span> Account sign-in</div>
+                    <div><span>✓</span> Online database storage</div>
+                    <div><span>✓</span> Placement statistics</div>
+                </div>
 
-function toggleCompany(){
-  $("companyBox").classList.toggle("hidden",$("status").value!=="Placed");
-}
+                <p class="small-note">
+                    Student Placement Tracker — College Demo Project
+                </p>
 
-$("studentForm").addEventListener("submit",function(e){
-  e.preventDefault();
+            </div>
 
-  const editId=$("editId").value;
-  const roll=$("roll").value.trim();
-  const existing=students.find(s=>s.roll.toLowerCase()===roll.toLowerCase() && String(s.id)!==editId);
+            <div class="auth-card">
 
-  if(existing){
-    alert("This roll number already exists.");
-    return;
-  }
+                <div class="tabs">
+                    <button class="tab active" id="loginTab">
+                        Sign in
+                    </button>
 
-  const student={
-    id:editId ? Number(editId) : nextId++,
-    name:$("name").value.trim(),
-    roll:roll,
-    department:$("department").value,
-    cgpa:$("cgpa").value==="" ? "" : Number($("cgpa").value),
-    status:$("status").value,
-    company:$("status").value==="Placed" ? $("company").value.trim() : ""
-  };
+                    <button class="tab" id="registerTab">
+                        Create account
+                    </button>
+                </div>
 
-  if(editId){
-    students=students.map(s=>String(s.id)===editId ? student : s);
-  } else {
-    students.push(student);
-  }
+                <h2 id="authTitle">Welcome back</h2>
 
-  saveData();
-  resetForm();
-  render();
-});
+                <p class="muted" id="authSubtitle">
+                    Sign in to continue to your dashboard.
+                </p>
 
-function resetForm(){
-  $("studentForm").reset();
-  $("editId").value="";
-  $("formTitle").textContent="Add Student";
-  $("saveButton").textContent="Add Student";
-  $("cancelEdit").classList.add("hidden");
-  toggleCompany();
-}
+                <form id="authForm">
 
-function editStudent(id){
-  const s=students.find(s=>s.id===id);
-  if(!s)return;
-  $("editId").value=s.id;
-  $("name").value=s.name;
-  $("roll").value=s.roll;
-  $("department").value=s.department;
-  $("cgpa").value=s.cgpa;
-  $("status").value=s.status;
-  $("company").value=s.company;
-  $("formTitle").textContent="Edit Student";
-  $("saveButton").textContent="Save Changes";
-  $("cancelEdit").classList.remove("hidden");
-  toggleCompany();
-  window.scrollTo({top:0,behavior:"smooth"});
-}
+                    <label for="fullName" id="nameLabel" class="hidden">
+                        Full name
+                    </label>
 
-function deleteStudent(id){
-  if(confirm("Delete this student record?")){
-    students=students.filter(s=>s.id!==id);
-    saveData();
-    render();
-  }
-}
+                    <input
+                        id="fullName"
+                        class="hidden"
+                        autocomplete="name"
+                        placeholder="Your full name"
+                    >
 
-function render(){
-  const placed=students.filter(s=>s.status==="Placed").length;
-  $("total").textContent=students.length;
-  $("placed").textContent=placed;
-  $("unplaced").textContent=students.length-placed;
-  $("rate").textContent=(students.length ? Math.round(placed/students.length*100) : 0)+"%";
+                    <label for="email">Email address</label>
 
-  const query=$("search").value.toLowerCase().trim();
-  const filtered=students.filter(s=>
-    [s.name,s.roll,s.department,s.company].some(v=>String(v||"").toLowerCase().includes(query))
-  );
+                    <input
+                        id="email"
+                        type="email"
+                        required
+                        autocomplete="email"
+                        placeholder="you@example.com"
+                    >
 
-  $("studentRows").innerHTML=filtered.map(s=>`
-    <tr>
-      <td>${escapeHTML(s.name)}</td>
-      <td>${escapeHTML(s.roll)}</td>
-      <td>${s.cgpa==="" ? "—" : Number(s.cgpa).toFixed(2)}</td>
-      <td><span class="badge ${s.status==="Placed" ? "" : "notplaced"}">${s.status}</span></td>
-      <td>${escapeHTML(s.company||"—")}</td>
-      <td class="actions">
-        <button class="secondary" onclick="editStudent(${s.id})">Edit</button>
-        <button class="danger" onclick="deleteStudent(${s.id})">Delete</button>
-      </td>
-    </tr>`).join("");
+                    <label for="password">Password</label>
 
-  $("emptyMessage").classList.toggle("hidden",filtered.length>0);
-  $("summary").textContent=students.length
-    ? `${placed} of ${students.length} students placed (${Math.round(placed/students.length*100)}%).`
-    : "Add student records to view placement statistics.";
-}
+                    <input
+                        id="password"
+                        type="password"
+                        required
+                        minlength="6"
+                        autocomplete="current-password"
+                        placeholder="At least 6 characters"
+                    >
 
-function escapeHTML(value){
-  return String(value).replace(/[&<>"']/g,c=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  })[c]);
-}
+                    <button class="primary-btn full" id="authSubmit" type="submit">
+                        Sign in →
+                    </button>
 
-$("search").addEventListener("input",render);
+                </form>
 
-function exportCSV(){
-  if(!students.length){alert("No records to export.");return;}
-  const headers=["Name","Roll Number","Department","CGPA","Status","Company"];
-  const rows=students.map(s=>[s.name,s.roll,s.department,s.cgpa,s.status,s.company]);
-  const csv=[headers,...rows].map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
-  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="student-placement-report.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
+                <p id="authMessage" class="message" role="status"></p>
 
-toggleCompany();
-</script>
+                <p class="fine-print">
+                    Never share your password with anyone.
+                </p>
+
+            </div>
+
+        </section>
+
+        <!-- Dashboard -->
+        <section id="appView" class="hidden">
+
+            <div class="welcome-row">
+
+                <div>
+                    <span class="eyebrow">PLACEMENT OVERVIEW</span>
+
+                    <h1>Your Dashboard</h1>
+
+                    <p class="muted">
+                        A clear view of your student placement records.
+                    </p>
+                </div>
+
+                <div class="user-area">
+                    <span id="userEmail" class="muted"></span>
+
+                    <button id="logoutBtn" class="outline-btn">
+                        Sign out
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+
+                <article class="stat-card">
+                    <span class="stat-label">Total Students</span>
+                    <strong id="totalCount">0</strong>
+                    <span class="stat-foot">Student records</span>
+                    <span class="stat-icon">◎</span>
+                </article>
+
+                <article class="stat-card">
+                    <span class="stat-label">Placed</span>
+                    <strong id="placedCount">0</strong>
+                    <span class="stat-foot">Successfully placed</span>
+                    <span class="stat-icon green">✓</span>
+                </article>
+
+                <article class="stat-card">
+                    <span class="stat-label">Seeking Placement</span>
+                    <strong id="seekingCount">0</strong>
+                    <span class="stat-foot">Still in progress</span>
+                    <span class="stat-icon orange">↗</span>
+                </article>
+
+                <article class="stat-card">
+                    <span class="stat-label">Placement Rate</span>
+                    <strong id="rateCount">0%</strong>
+                    <span class="stat-foot">Of your records</span>
+                    <span class="stat-icon purple">%</span>
+                </article>
+
+            </div>
+
+            <!-- Student Records -->
+            <div class="content-card">
+
+                <div class="section-heading">
+
+                    <div>
+                        <h2>Student Records</h2>
+
+                        <p class="muted">
+                            Manage your student placement details.
+                        </p>
+                    </div>
+
+                    <div class="toolbar">
+
+                        <input
+                            id="searchInput"
+                            class="search"
+                            placeholder="Search students..."
+                        >
+
+                        <button id="exportBtn" class="outline-btn">
+                            Export CSV ↓
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- Add Student Form -->
+                <form id="studentForm" class="student-form">
+
+                    <input id="studentId" type="hidden">
+
+                    <div class="field">
+                        <label for="studentName">Student Name *</label>
+
+                        <input
+                            id="studentName"
+                            required
+                            maxlength="100"
+                            placeholder="e.g. Aarya Patil"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="rollNo">Roll Number *</label>
+
+                        <input
+                            id="rollNo"
+                            required
+                            maxlength="40"
+                            placeholder="e.g. TEITA101"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="department">Department</label>
+
+                        <input
+                            id="department"
+                            maxlength="80"
+                            placeholder="Information Technology"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="cgpa">CGPA</label>
+
+                        <input
+                            id="cgpa"
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.01"
+                            placeholder="e.g. 8.25"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="placementStatus">Placement Status</label>
+
+                        <select id="placementStatus">
+                            <option value="Seeking">Seeking</option>
+                            <option value="Placed">Placed</option>
+                            <option value="Interviewing">Interviewing</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="company">Company</label>
+
+                        <input
+                            id="company"
+                            maxlength="100"
+                            placeholder="Company name"
+                        >
+                    </div>
+
+                    <div class="form-actions">
+
+                        <button
+                            class="primary-btn"
+                            id="saveStudentBtn"
+                            type="submit"
+                        >
+                            + Add Student
+                        </button>
+
+                        <button
+                            class="outline-btn hidden"
+                            id="cancelEditBtn"
+                            type="button"
+                        >
+                            Cancel Edit
+                        </button>
+
+                        <span id="formMessage" class="message"></span>
+
+                    </div>
+
+                </form>
+
+                <!-- Students Table -->
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>STUDENT</th>
+                                <th>ROLL NO.</th>
+                                <th>DEPARTMENT</th>
+                                <th>CGPA</th>
+                                <th>STATUS</th>
+                                <th>COMPANY</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="studentRows">
+
+                            <tr>
+                                <td colspan="7" class="empty-cell">
+                                    Sign in to load your records.
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="table-bottom">
+                    <span id="recordCount">0 records</span>
+                    <span>StudentTrack · Demo Project</span>
+                </div>
+
+            </div>
+
+            <p class="disclaimer">
+                Use sample data for testing. Review security before storing
+                real student information.
+            </p>
+
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <span>© 2026 StudentTrack</span>
+
+            <span>
+                Built for learning · Student Placement Tracker
+            </span>
+        </footer>
+
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
 
 </body>
 </html>
