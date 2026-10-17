@@ -334,7 +334,7 @@ h1 span {
 }
 
 .hidden {
-    display: none !important;
+    display: none;
 }
 
 .notice {
