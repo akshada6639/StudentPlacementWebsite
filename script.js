@@ -545,14 +545,54 @@ async function initializeApp() {
         showLogin();
     }
 
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        const resetView = document.getElementById("resetPasswordView");
+
+        if (event === "PASSWORD_RECOVERY") {
+            authView.style.display = "none";
+            appView.style.display = "none";
+
+            if (resetView) {
+                resetView.classList.remove("hidden");
+                resetView.style.display = "block";
+            }
+            return;
+        }
+
         if (session?.user) {
+            if (resetView) {
+                resetView.classList.add("hidden");
+                resetView.style.display = "none";
+            }
             showDashboard(session.user);
         } else {
             showLogin();
         }
     });
 }
+supabaseClient.auth.onAuthStateChange((event, session) => {
+        const resetView = document.getElementById("resetPasswordView");
 
+        if (event === "PASSWORD_RECOVERY") {
+            authView.style.display = "none";
+            appView.style.display = "none";
+
+            if (resetView) {
+                resetView.classList.remove("hidden");
+                resetView.style.display = "block";
+            }
+            return;
+        }
+
+        if (session?.user) {
+            if (resetView) {
+                resetView.classList.add("hidden");
+                resetView.style.display = "none";
+            }
+            showDashboard(session.user);
+        } else {
+            showLogin();
+        }
+    });
 setAuthMode("login");
 initializeApp();
