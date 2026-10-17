@@ -384,6 +384,30 @@
                 Built for learning · Student Placement Tracker
             </span>
         </footer>
+        <section id="resetPasswordView" class="auth-layout hidden">
+    <div class="auth-card">
+        <h2>Set New Password</h2>
+        <p>Enter your new password below.</p>
+
+        <form id="resetPasswordForm">
+            <label for="newPassword">New Password</label>
+
+            <input
+                type="password"
+                id="newPassword"
+                minlength="6"
+                placeholder="Enter new password"
+                required
+            >
+
+            <button type="submit" class="primary-btn full">
+                Update Password
+            </button>
+        </form>
+
+        <p id="resetPasswordMessage" class="message" role="status"></p>
+    </div>
+</section>
 
     </main>
 
