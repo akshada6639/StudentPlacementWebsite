@@ -19,36 +19,81 @@ function showMessage(element, message, success = false) {
     if (!element) return;
 
     element.textContent = message;
+    element.classList.toggle("error-text", !success && !!message);
     element.style.color = success ? "#15803d" : "#dc2626";
 }
 
-function showToast(message) {
+function showToast(message, error = false) {
     const toast = document.getElementById("toast");
-
     if (!toast) return;
 
     toast.textContent = message;
+    toast.classList.toggle("error", error);
     toast.classList.add("show");
 
-    setTimeout(() => {
-        toast.classList.remove("show");
-    }, 3000);
+    setTimeout(() => toast.classList.remove("show"), 3500);
 }
 
 function showSetupNotice(message) {
     const notice = document.getElementById("setupNotice");
+    if (!notice) return;
 
-    if (notice) {
-        notice.textContent = message;
-        notice.style.display = "block";
-    }
+    notice.classList.remove("hidden");
+    notice.style.display = "block";
+
+    const heading = notice.querySelector("h2");
+    const paragraph = notice.querySelector("p");
+
+    if (heading) heading.textContent = "Setup / Connection Error";
+    if (paragraph) paragraph.textContent = message;
 }
 
 function hideSetupNotice() {
     const notice = document.getElementById("setupNotice");
-
     if (notice) {
+        notice.classList.add("hidden");
         notice.style.display = "none";
+    }
+}
+
+function showAuthView() {
+    authView.classList.remove("hidden");
+    authView.style.display = "grid";
+}
+
+function hideAuthView() {
+    authView.classList.add("hidden");
+    authView.style.display = "none";
+}
+
+function showAppView() {
+    appView.classList.remove("hidden");
+    appView.style.display = "block";
+}
+
+function hideAppView() {
+    appView.classList.add("hidden");
+    appView.style.display = "none";
+}
+
+function showResetView() {
+    hideAuthView();
+    hideAppView();
+
+    const resetView = document.getElementById("resetPasswordView");
+
+    if (resetView) {
+        resetView.classList.remove("hidden");
+        resetView.style.display = "grid";
+    }
+}
+
+function hideResetView() {
+    const resetView = document.getElementById("resetPasswordView");
+
+    if (resetView) {
+        resetView.classList.add("hidden");
+        resetView.style.display = "none";
     }
 }
 
@@ -68,28 +113,58 @@ function setAuthMode(mode) {
     document.getElementById("authSubmit").textContent =
         isRegister ? "Create Account" : "Login";
 
-    document.getElementById("nameLabel").classList.toggle("hidden", !isRegister);
-document.getElementById("fullName").classList.toggle("hidden", !isRegister);
+    document.getElementById("nameLabel").classList.toggle(
+        "hidden",
+        !isRegister
+    );
 
-document.getElementById("nameLabel").style.display = isRegister ? "block" : "none";
-document.getElementById("fullName").style.display = isRegister ? "block" : "none";
+    document.getElementById("fullName").classList.toggle(
+        "hidden",
+        !isRegister
+    );
+
+    document.getElementById("fullName").required = isRegister;
+
+    document.getElementById("loginTab").classList.toggle(
+        "active",
+        !isRegister
+    );
+
+    document.getElementById("registerTab").classList.toggle(
+        "active",
+        isRegister
+    );
 
     showMessage(authMessage, "");
 }
 
-document.getElementById("loginTab")?.addEventListener("click", () => {
+document.getElementById("loginTab").addEventListener("click", () => {
     setAuthMode("login");
 });
 
-document.getElementById("registerTab")?.addEventListener("click", () => {
+document.getElementById("registerTab").addEventListener("click", () => {
     setAuthMode("register");
 });
+
+function showLogin() {
+    currentUser = null;
+    students = [];
+    editingId = null;
+
+    hideAppView();
+    hideResetView();
+    showAuthView();
+
+    renderStudents();
+    updateDashboard();
+}
 
 function showDashboard(user) {
     currentUser = user;
 
-    authView.style.display = "none";
-    appView.style.display = "block";
+    hideAuthView();
+    hideResetView();
+    showAppView();
 
     const userEmail = document.getElementById("userEmail");
 
@@ -100,64 +175,61 @@ function showDashboard(user) {
     loadStudents();
 }
 
-function showLogin() {
-    currentUser = null;
-    students = [];
-
-    appView.style.display = "none";
-    authView.style.display = "block";
-
-    renderStudents();
-    updateDashboard();
-}
-
 async function handleAuth(event) {
     event.preventDefault();
 
     if (!supabaseClient) {
-        showMessage(authMessage, "Supabase configuration is missing.");
+        showMessage(
+            authMessage,
+            "Supabase connection is not ready. Check config.js."
+        );
         return;
     }
 
     const fullName = document.getElementById("fullName").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
-
     const submitButton = document.getElementById("authSubmit");
+
+    if (authMode === "register" && !fullName) {
+        showMessage(authMessage, "Please enter your full name.");
+        return;
+    }
 
     submitButton.disabled = true;
     showMessage(authMessage, "Please wait...");
 
     try {
         if (authMode === "register") {
-            if (!fullName) {
-                showMessage(authMessage, "Please enter your full name.");
-                return;
-            }
-
             const { data, error } = await supabaseClient.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
                         full_name: fullName
-                    }
+                    },
+                    emailRedirectTo:
+                        "https://akshada6639.github.io/StudentPlacementWebsite/"
                 }
             });
 
             if (error) throw error;
 
             if (data.session) {
-                showMessage(authMessage, "Account created successfully!", true);
+                showMessage(
+                    authMessage,
+                    "Account created successfully!",
+                    true
+                );
             } else {
                 showMessage(
                     authMessage,
-                    "Registration successful! Check your email to confirm your account.",
+                    "Registration successful! Check your email and click the confirmation link before logging in.",
                     true
                 );
             }
         } else {
-            const { error } =
+            const { data, error } =
                 await supabaseClient.auth.signInWithPassword({
                     email,
                     password
@@ -165,63 +237,188 @@ async function handleAuth(event) {
 
             if (error) throw error;
 
-            showMessage(authMessage, "Login successful!", true);
+            if (data.user) {
+                showMessage(authMessage, "Login successful!", true);
+                showDashboard(data.user);
+            }
         }
     } catch (error) {
-        showMessage(authMessage, error.message || "Authentication failed.");
+        showMessage(
+            authMessage,
+            error.message || "Authentication failed."
+        );
     } finally {
         submitButton.disabled = false;
     }
 }
 
-authForm?.addEventListener("submit", handleAuth);
+authForm.addEventListener("submit", handleAuth);
 
-document.getElementById("logoutBtn")?.addEventListener("click", async () => {
-    if (!supabaseClient) return;
+document.getElementById("forgotPasswordBtn").addEventListener(
+    "click",
+    async () => {
+        if (!supabaseClient) {
+            showMessage(authMessage, "Supabase connection is not ready.");
+            return;
+        }
 
-    const { error } = await supabaseClient.auth.signOut();
+        const email = document.getElementById("email").value.trim();
 
-    if (error) {
-        showToast(error.message);
-        return;
+        if (!email) {
+            showMessage(
+                authMessage,
+                "Please enter your email address first."
+            );
+            document.getElementById("email").focus();
+            return;
+        }
+
+        const button = document.getElementById("forgotPasswordBtn");
+        button.disabled = true;
+
+        showMessage(authMessage, "Sending password reset email...");
+
+        try {
+            const { error } =
+                await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo:
+                        "https://akshada6639.github.io/StudentPlacementWebsite/"
+                });
+
+            if (error) throw error;
+
+            showMessage(
+                authMessage,
+                "If an account exists for this email, a password reset link will be sent. Check your inbox and spam folder.",
+                true
+            );
+        } catch (error) {
+            showMessage(
+                authMessage,
+                error.message || "Could not send password reset email."
+            );
+        } finally {
+            button.disabled = false;
+        }
     }
+);
 
-    showLogin();
-    showToast("Logged out successfully.");
-});
+document.getElementById("resetPasswordForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+
+        if (!supabaseClient) return;
+
+        const password = document.getElementById("newPassword").value;
+        const message = document.getElementById("resetPasswordMessage");
+        const button = event.currentTarget.querySelector(
+            'button[type="submit"]'
+        );
+
+        if (password.length < 6) {
+            showMessage(message, "Password must contain at least 6 characters.");
+            return;
+        }
+
+        button.disabled = true;
+        showMessage(message, "Updating password...");
+
+        try {
+            const { error } = await supabaseClient.auth.updateUser({
+                password
+            });
+
+            if (error) throw error;
+
+            showMessage(
+                message,
+                "Password updated successfully. You can now sign in.",
+                true
+            );
+
+            await supabaseClient.auth.signOut();
+            document.getElementById("resetPasswordForm").reset();
+
+            setTimeout(() => {
+                showLogin();
+                setAuthMode("login");
+                showMessage(
+                    authMessage,
+                    "Password updated. Sign in with your new password.",
+                    true
+                );
+            }, 1500);
+        } catch (error) {
+            showMessage(
+                message,
+                error.message || "Could not update password."
+            );
+        } finally {
+            button.disabled = false;
+        }
+    }
+);
+
+document.getElementById("logoutBtn").addEventListener(
+    "click",
+    async () => {
+        if (!supabaseClient) return;
+
+        const { error } = await supabaseClient.auth.signOut();
+
+        if (error) {
+            showToast(error.message, true);
+            return;
+        }
+
+        showLogin();
+        showToast("Logged out successfully.");
+    }
+);
 
 async function loadStudents() {
     if (!supabaseClient || !currentUser) return;
 
     studentRows.innerHTML =
-        '<tr><td colspan="6">Loading records...</td></tr>';
+        '<tr><td colspan="7" class="empty-cell">Loading records...</td></tr>';
 
-    const { data, error } = await supabaseClient
-        .from("students")
-        .select("*")
-        .order("created_at", { ascending: false });
+    try {
+        const { data, error } = await supabaseClient
+            .from("students")
+            .select("*")
+            .order("created_at", { ascending: false });
 
-    if (error) {
+        if (error) throw error;
+
+        students = data || [];
+
+        renderStudents();
+        updateDashboard();
+    } catch (error) {
         studentRows.innerHTML =
-            '<tr><td colspan="6">Could not load records.</td></tr>';
+            '<tr><td colspan="7" class="empty-cell">Could not load records.</td></tr>';
 
-        showToast(error.message);
-        return;
+        showToast(error.message || "Could not load student records.", true);
     }
+}
 
-    students = data || [];
-
-    renderStudents();
-    updateDashboard();
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+    })[character]);
 }
 
 function renderStudents() {
     if (!studentRows) return;
 
-    const searchTerm =
-        document.getElementById("searchInput")?.value
-            .trim()
-            .toLowerCase() || "";
+    const searchTerm = (
+        document.getElementById("searchInput")?.value || ""
+    ).trim().toLowerCase();
 
     const filteredStudents = students.filter(student => {
         return [
@@ -237,29 +434,37 @@ function renderStudents() {
 
     if (filteredStudents.length === 0) {
         studentRows.innerHTML =
-            '<tr><td colspan="6">No student records found.</td></tr>';
+            '<tr><td colspan="7" class="empty-cell">No student records found.</td></tr>';
     } else {
-        studentRows.innerHTML = filteredStudents.map(student => `
-            <tr>
-                <td>${escapeHTML(student.name)}</td>
-                <td>${escapeHTML(student.roll_no)}</td>
-                <td>${escapeHTML(student.department || "-")}</td>
-                <td>${student.cgpa ?? "-"}</td>
-                <td>${escapeHTML(student.status)}</td>
-                <td>
-                    <button type="button"
-                        class="edit-btn"
-                        data-edit="${student.id}">
-                        Edit
-                    </button>
-                    <button type="button"
-                        class="delete-btn"
-                        data-delete="${student.id}">
-                        Delete
-                    </button>
-                </td>
-            </tr>
-        `).join("");
+        studentRows.innerHTML = filteredStudents.map(student => {
+            const status = student.status || "Seeking";
+            const statusClass = status.toLowerCase();
+
+            return `
+                <tr>
+                    <td>
+                        <span class="student-name">${escapeHTML(student.name)}</span>
+                    </td>
+                    <td>${escapeHTML(student.roll_no)}</td>
+                    <td>${escapeHTML(student.department || "-")}</td>
+                    <td>${student.cgpa ?? "-"}</td>
+                    <td>
+                        <span class="badge ${escapeHTML(statusClass)}">
+                            ${escapeHTML(status)}
+                        </span>
+                    </td>
+                    <td>${escapeHTML(student.company || "-")}</td>
+                    <td>
+                        <div class="row-actions">
+                            <button type="button" class="text-btn"
+                                data-edit="${escapeHTML(student.id)}">Edit</button>
+                            <button type="button" class="text-btn danger"
+                                data-delete="${escapeHTML(student.id)}">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
     }
 
     const recordCount = document.getElementById("recordCount");
@@ -268,16 +473,6 @@ function renderStudents() {
         recordCount.textContent =
             `${filteredStudents.length} record(s)`;
     }
-}
-
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, character => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-    })[character]);
 }
 
 function updateDashboard() {
@@ -292,7 +487,7 @@ function updateDashboard() {
     document.getElementById("rateCount").textContent = `${rate}%`;
 }
 
-studentForm?.addEventListener("submit", async event => {
+studentForm.addEventListener("submit", async event => {
     event.preventDefault();
 
     if (!supabaseClient || !currentUser) {
@@ -314,7 +509,10 @@ studentForm?.addEventListener("submit", async event => {
 
     const cgpa = cgpaValue === "" ? null : Number(cgpaValue);
 
-    if (cgpa !== null && (cgpa < 0 || cgpa > 10 || !Number.isFinite(cgpa))) {
+    if (
+        cgpa !== null &&
+        (!Number.isFinite(cgpa) || cgpa < 0 || cgpa > 10)
+    ) {
         showMessage(formMessage, "CGPA must be between 0 and 10.");
         return;
     }
@@ -340,6 +538,7 @@ studentForm?.addEventListener("submit", async event => {
                 .from("students")
                 .update(record)
                 .eq("id", editingId)
+                .eq("user_id", currentUser.id)
                 .select();
         } else {
             result = await supabaseClient
@@ -354,27 +553,28 @@ studentForm?.addEventListener("submit", async event => {
         editingId = null;
 
         document.getElementById("studentId").value = "";
-        document.getElementById("cancelEditBtn").style.display = "none";
-        saveButton.textContent = "Save Student";
+        document.getElementById("cancelEditBtn").classList.add("hidden");
+        saveButton.textContent = "+ Add Student";
 
         showMessage(formMessage, "Student record saved successfully!", true);
 
         await loadStudents();
         showToast("Record saved successfully.");
     } catch (error) {
-        showMessage(formMessage, error.message || "Could not save record.");
+        showMessage(
+            formMessage,
+            error.message || "Could not save student record."
+        );
     } finally {
         saveButton.disabled = false;
     }
 });
 
-studentRows?.addEventListener("click", async event => {
+studentRows.addEventListener("click", async event => {
     const editButton = event.target.closest("[data-edit]");
     const deleteButton = event.target.closest("[data-delete]");
 
-    if (editButton) {
-        editStudent(editButton.dataset.edit);
-    }
+    if (editButton) editStudent(editButton.dataset.edit);
 
     if (deleteButton) {
         await deleteStudent(deleteButton.dataset.delete);
@@ -383,21 +583,21 @@ studentRows?.addEventListener("click", async event => {
 
 function editStudent(id) {
     const student = students.find(s => String(s.id) === String(id));
-
     if (!student) return;
 
     editingId = student.id;
 
     document.getElementById("studentId").value = student.id;
-    document.getElementById("studentName").value = student.name;
-    document.getElementById("rollNo").value = student.roll_no;
+    document.getElementById("studentName").value = student.name || "";
+    document.getElementById("rollNo").value = student.roll_no || "";
     document.getElementById("department").value = student.department || "";
     document.getElementById("cgpa").value = student.cgpa ?? "";
-    document.getElementById("placementStatus").value = student.status;
+    document.getElementById("placementStatus").value =
+        student.status || "Seeking";
     document.getElementById("company").value = student.company || "";
 
     document.getElementById("saveStudentBtn").textContent = "Update Student";
-    document.getElementById("cancelEditBtn").style.display = "inline-block";
+    document.getElementById("cancelEditBtn").classList.remove("hidden");
 
     showMessage(formMessage, "Editing student record.", true);
 
@@ -407,50 +607,49 @@ function editStudent(id) {
     });
 }
 
-document.getElementById("cancelEditBtn")?.addEventListener("click", () => {
+document.getElementById("cancelEditBtn").addEventListener("click", () => {
     editingId = null;
 
     studentForm.reset();
 
     document.getElementById("studentId").value = "";
-    document.getElementById("saveStudentBtn").textContent = "Save Student";
-    document.getElementById("cancelEditBtn").style.display = "none";
+    document.getElementById("saveStudentBtn").textContent = "+ Add Student";
+    document.getElementById("cancelEditBtn").classList.add("hidden");
 
     showMessage(formMessage, "");
 });
 
 async function deleteStudent(id) {
     const student = students.find(s => String(s.id) === String(id));
+    if (!student || !currentUser) return;
 
-    if (!student) return;
+    if (!confirm(`Delete the record for ${student.name}?`)) return;
 
-    const confirmed = confirm(
-        `Delete the record for ${student.name}? This cannot be undone.`
-    );
+    try {
+        const { error } = await supabaseClient
+            .from("students")
+            .delete()
+            .eq("id", id)
+            .eq("user_id", currentUser.id);
 
-    if (!confirmed) return;
+        if (error) throw error;
 
-    const { error } = await supabaseClient
-        .from("students")
-        .delete()
-        .eq("id", id);
-
-    if (error) {
-        showToast(error.message);
-        return;
+        await loadStudents();
+        showToast("Student record deleted.");
+    } catch (error) {
+        showToast(error.message || "Could not delete the record.", true);
     }
-
-    await loadStudents();
-    showToast("Student record deleted.");
 }
 
-document.getElementById("searchInput")?.addEventListener("input", renderStudents);
+document.getElementById("searchInput").addEventListener(
+    "input",
+    renderStudents
+);
 
-document.getElementById("exportBtn")?.addEventListener("click", () => {
-    const searchTerm =
-        document.getElementById("searchInput")?.value
-            .trim()
-            .toLowerCase() || "";
+document.getElementById("exportBtn").addEventListener("click", () => {
+    const searchTerm = (
+        document.getElementById("searchInput")?.value || ""
+    ).trim().toLowerCase();
 
     const filteredStudents = students.filter(student =>
         [
@@ -502,97 +701,66 @@ document.getElementById("exportBtn")?.addEventListener("click", () => {
     link.click();
     link.remove();
 
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
 async function initializeApp() {
-    if (
-        !SUPABASE_URL ||
-        !SUPABASE_KEY ||
-        SUPABASE_URL.includes("PASTE_YOUR") ||
-        SUPABASE_KEY.includes("PASTE_YOUR")
-    ) {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
         showSetupNotice(
-            "Setup required: configure your Supabase project in config.js."
+            "Supabase configuration is missing. Check config.js."
         );
         showLogin();
         return;
     }
 
     if (!window.supabase) {
-        showSetupNotice("Could not load Supabase. Check your internet connection.");
-        return;
-    }
-
-    supabaseClient = window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
-
-    hideSetupNotice();
-
-    const { data, error } = await supabaseClient.auth.getSession();
-
-    if (error) {
-        showSetupNotice(error.message);
+        showSetupNotice(
+            "Supabase library could not load. Check your internet connection."
+        );
         showLogin();
         return;
     }
 
-    if (data.session?.user) {
-        showDashboard(data.session.user);
-    } else {
-        showLogin();
-    }
+    try {
+        supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
 
-    supabaseClient.auth.onAuthStateChange((event, session) => {
-        const resetView = document.getElementById("resetPasswordView");
+        const { data, error } = await supabaseClient.auth.getSession();
 
-        if (event === "PASSWORD_RECOVERY") {
-            authView.style.display = "none";
-            appView.style.display = "none";
+        if (error) throw error;
 
-            if (resetView) {
-                resetView.classList.remove("hidden");
-                resetView.style.display = "block";
+        hideSetupNotice();
+
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === "PASSWORD_RECOVERY") {
+                showResetView();
+                return;
             }
-            return;
-        }
 
-        if (session?.user) {
-            if (resetView) {
-                resetView.classList.add("hidden");
-                resetView.style.display = "none";
+            if (session?.user) {
+                showDashboard(session.user);
+            } else {
+                showLogin();
             }
-            showDashboard(session.user);
+        });
+
+        if (data.session?.user) {
+            showDashboard(data.session.user);
         } else {
             showLogin();
         }
-    });
+    } catch (error) {
+        supabaseClient = null;
+
+        showSetupNotice(
+            error.message || "Could not connect to Supabase."
+        );
+
+        showLogin();
+    }
 }
-supabaseClient.auth.onAuthStateChange((event, session) => {
-        const resetView = document.getElementById("resetPasswordView");
 
-        if (event === "PASSWORD_RECOVERY") {
-            authView.style.display = "none";
-            appView.style.display = "none";
-
-            if (resetView) {
-                resetView.classList.remove("hidden");
-                resetView.style.display = "block";
-            }
-            return;
-        }
-
-        if (session?.user) {
-            if (resetView) {
-                resetView.classList.add("hidden");
-                resetView.style.display = "none";
-            }
-            showDashboard(session.user);
-        } else {
-            showLogin();
-        }
-    });
 setAuthMode("login");
 initializeApp();
