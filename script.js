@@ -68,11 +68,11 @@ function setAuthMode(mode) {
     document.getElementById("authSubmit").textContent =
         isRegister ? "Create Account" : "Login";
 
-    document.getElementById("nameLabel").style.display =
-        isRegister ? "block" : "none";
+    document.getElementById("nameLabel").classList.toggle("hidden", !isRegister);
+document.getElementById("fullName").classList.toggle("hidden", !isRegister);
 
-    document.getElementById("fullName").style.display =
-        isRegister ? "block" : "none";
+document.getElementById("nameLabel").style.display = isRegister ? "block" : "none";
+document.getElementById("fullName").style.display = isRegister ? "block" : "none";
 
     showMessage(authMessage, "");
 }
