@@ -17,3 +17,5 @@ Deployment:
 3. Do NOT replace/delete config.js.
 4. Commit changes to the branch used by GitHub Pages and wait for deployment.
 5. Test login, records, add/edit/delete, filters and CSV export. If an issue occurs, restore your backup.
+
+Password reset fix: the recovery link opens a new-password and confirm-password form. In Supabase Authentication > URL Configuration, ensure the live GitHub Pages URL is included in Redirect URLs.
